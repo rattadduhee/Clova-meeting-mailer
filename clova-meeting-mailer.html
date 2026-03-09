@@ -8,9 +8,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <style>
   :root {
-    --green: #00C471;
-    --green-dark: #00A35C;
-    --green-pale: #E8FBF3;
+    --green: #0046FF;
+    --green-dark: #0035C1;
+    --green-pale: #EEF3FF;
     --navy: #0D1B2A;
     --gray-900: #1A1A2E;
     --gray-700: #3D3D56;
@@ -18,7 +18,7 @@
     --gray-100: #F4F4F9;
     --white: #FFFFFF;
     --border: #E2E2EF;
-    --shadow: 0 4px 24px rgba(0,196,113,0.10);
+    --shadow: 0 4px 24px rgba(0,70,255,0.10);
     --shadow-lg: 0 12px 48px rgba(13,27,42,0.13);
   }
 
@@ -356,7 +356,7 @@
   .recipient-tag {
     background: var(--green-pale);
     color: var(--green-dark);
-    border: 1px solid #A8EDCD;
+    border: 1px solid #0046FF;
     padding: 5px 12px;
     border-radius: 20px;
     font-size: 13px;
@@ -449,7 +449,7 @@
 
   /* ── Send button ── */
   .btn-send {
-    background: linear-gradient(135deg, #00C471 0%, #00A0A0 100%);
+    background: linear-gradient(135deg, #0046FF 0%, #0035C1 100%);
     color: white;
     border: none;
     border-radius: 10px;
@@ -460,7 +460,7 @@
     transition: opacity 0.2s, transform 0.1s;
     display: flex; align-items: center; gap: 10px;
     font-family: 'Noto Sans KR', sans-serif;
-    box-shadow: 0 4px 16px rgba(0,196,113,0.35);
+    box-shadow: 0 4px 16px rgba(0, 70, 255, 0.10);
   }
   .btn-send:hover { opacity: 0.92; }
   .btn-send:active { transform: scale(0.97); }
@@ -544,42 +544,11 @@
 <body>
 
 <header>
-  <div class="logo-badge">CLOVA</div>
-  <h1>회의록 메일 전송기 <span class="sub">— Meeting Note Mailer</span></h1>
+  <div class="logo-badge">SHINHAN</div>
+  <h1>회의록 메일 공유 에이전트 <span class="sub">— Meeting Note Mailer</span></h1>
 </header>
 
-<!-- Setup banner -->
-<div class="setup-banner" id="setupBanner">
-  <div class="icon">⚙️</div>
-  <div>
-    <strong>EmailJS 설정이 필요합니다</strong>
-    <a href="https://www.emailjs.com/" target="_blank">emailjs.com</a>에서 무료 계정 생성 후,
-    <code>Public Key</code>, <code>Service ID</code>, <code>Template ID</code>를 입력하세요.
-    템플릿 변수: <code>{{to_email}}</code>, <code>{{subject}}</code>, <code>{{message}}</code>, <code>{{from_name}}</code>
-    <br>
-    <button class="setup-toggle" onclick="toggleConfig()">🔧 설정 열기</button>
-  </div>
-</div>
 
-<!-- Config panel -->
-<div class="config-panel" id="configPanel">
-  <h3>🔑 EmailJS 연동 설정</h3>
-  <div class="config-grid">
-    <div class="config-field">
-      <label>Public Key</label>
-      <input type="text" id="ejsPublicKey" placeholder="xxxxxxxxxxxxxxxxxxxxxx">
-    </div>
-    <div class="config-field">
-      <label>Service ID</label>
-      <input type="text" id="ejsServiceId" placeholder="service_xxxxxxx">
-    </div>
-    <div class="config-field">
-      <label>Template ID</label>
-      <input type="text" id="ejsTemplateId" placeholder="template_xxxxxxx">
-    </div>
-  </div>
-  <button class="config-save" onclick="saveConfig()">저장하기</button>
-</div>
 
 <!-- Main card -->
 <div class="card" id="mainCard">
@@ -637,7 +606,7 @@
         <label>📧 수신자 이메일</label>
         <div class="recipients-row" id="recipientTags"></div>
         <div class="email-input-row" style="margin-top: 8px;">
-          <input type="email" id="emailInput" placeholder="example@company.com 입력 후 + 버튼 또는 Enter">
+          <input type="email" id="emailInput" placeholder="example@shinhan.com 입력 후 + 버튼 또는 Enter">
           <button class="add-btn" onclick="addRecipient()" title="추가">＋</button>
         </div>
       </div>
@@ -674,45 +643,18 @@
 
 <script>
   // ── State ──
+
   let currentStep = 1;
   let recipients = [];
   let config = { publicKey: '', serviceId: '', templateId: '' };
 
-  // Load from localStorage
-  try {
-    const saved = JSON.parse(localStorage.getItem('clovaMail_config') || '{}');
-    if (saved.publicKey) config = saved;
-    applyConfigToInputs();
-    if (config.publicKey) {
-      emailjs.init(config.publicKey);
-      document.getElementById('setupBanner').style.display = 'none';
-    }
-  } catch(e) {}
+  
+  // ── EmailJS 초기화 ───
+  const EMAILJS_PUBLIC_KEY  = 'vRI1vrHLg1Twaa7uP';
+  const EMAILJS_SERVICE_ID  = 'service_37r6wb7';
+  const EMAILJS_TEMPLATE_ID = 'template_p8agz9n';
 
-  function applyConfigToInputs() {
-    document.getElementById('ejsPublicKey').value = config.publicKey || '';
-    document.getElementById('ejsServiceId').value = config.serviceId || '';
-    document.getElementById('ejsTemplateId').value = config.templateId || '';
-  }
-
-  function toggleConfig() {
-    const p = document.getElementById('configPanel');
-    p.classList.toggle('open');
-  }
-
-  function saveConfig() {
-    config.publicKey = document.getElementById('ejsPublicKey').value.trim();
-    config.serviceId = document.getElementById('ejsServiceId').value.trim();
-    config.templateId = document.getElementById('ejsTemplateId').value.trim();
-    if (!config.publicKey || !config.serviceId || !config.templateId) {
-      showToast('모든 필드를 입력해주세요.', 'error'); return;
-    }
-    localStorage.setItem('clovaMail_config', JSON.stringify(config));
-    emailjs.init(config.publicKey);
-    document.getElementById('setupBanner').style.display = 'none';
-    document.getElementById('configPanel').classList.remove('open');
-    showToast('✅ EmailJS 설정이 저장되었습니다.', 'success');
-  }
+  emailjs.init(EMAILJS_PUBLIC_KEY);
 
   // ── Step logic ──
   function updateStepUI() {
@@ -810,10 +752,8 @@
   }
 
   // ── Send ──
+  // ── Send ──
   async function sendMail() {
-    if (!config.publicKey) {
-      showToast('⚙️ 먼저 EmailJS 설정을 완료해주세요.', 'error'); return;
-    }
     if (recipients.length === 0) {
       showToast('수신자 이메일을 1개 이상 추가해주세요.', 'error'); return;
     }
@@ -821,23 +761,29 @@
     const subject = document.getElementById('mailSubject').value.trim() || '[회의록] 클로바 노트 요약';
     const note = document.getElementById('mailNote').value.trim();
     const content = document.getElementById('pasteInput').value.trim();
-    const message = (note ? `📝 추가 메모:\n${note}\n\n` : '') + `📋 회의 내용:\n\n${content}`;
+    
+    // 메일 본문 구성
+    const messageBody = (note ? `■ 회의 내용:\n\n${content}\n\n` : '') + `■ 추가 메모:\n${note}`;
 
-    const btn = document.getElementById('btnNext');
-    const spinner = document.getElementById('spinner');
-    btn.disabled = true;
-    if (spinner) spinner.style.display = 'inline-block';
+    const btnNext = document.getElementById('btnNext');
+    // 스피너 처리를 위해 버튼 내부 HTML 임시 변경
+    const originalBtnText = btnNext.innerHTML;
+    btnNext.disabled = true;
+    btnNext.innerHTML = '<span class="spinner" style="display:inline-block"></span> 전송 중...';
 
     try {
+      // 여러 명에게 각각 전송
       for (const email of recipients) {
-        await emailjs.send(config.serviceId, config.templateId, {
-          to_email: email,
-          subject: subject,
-          message: message,
+        // 중요: 상수로 선언한 EMAILJS_SERVICE_ID 등을 직접 사용해야 함
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email: email,      // EmailJS 템플릿의 {{to_email}}과 일치해야 함
+          subject: subject,     // EmailJS 템플릿의 {{subject}}와 일치해야 함
+          message: messageBody, // EmailJS 템플릿의 {{message}}와 일치해야 함
           from_name: '클로바 회의록 시스템'
         });
       }
-      // Success
+
+      // 전송 성공 시 UI 처리
       document.getElementById('navRow').style.display = 'none';
       for (let i = 1; i <= 3; i++) {
         document.getElementById(`section${i}`).className = 'section';
@@ -845,12 +791,14 @@
       }
       const ss = document.getElementById('successScreen');
       ss.className = 'success-screen active';
-      document.getElementById('successMsg').textContent =
-        `${recipients.join(', ')}으로 회의록이 성공적으로 전송되었습니다.`;
+      document.getElementById('successMsg').textContent = 
+        `${recipients.length}명에게 회의록을 성공적으로 보냈습니다.`;
+
     } catch(err) {
-      showToast('❌ 전송 실패: ' + (err.text || err.message || '알 수 없는 오류'), 'error');
-      btn.disabled = false;
-      if (spinner) spinner.style.display = 'none';
+      console.error('EmailJS Error:', err);
+      showToast('❌ 전송 실패: ' + (err.text || '연결 상태를 확인하세요'), 'error');
+      btnNext.disabled = false;
+      btnNext.innerHTML = originalBtnText;
     }
   }
 
@@ -858,14 +806,25 @@
   function resetAll() {
     currentStep = 1;
     recipients = [];
+    
+    // 1. 입력값들 초기화
     document.getElementById('pasteInput').value = '';
     document.getElementById('emailInput').value = '';
     document.getElementById('mailNote').value = '';
     document.getElementById('mailSubject').value = '[회의록] 클로바 노트 요약 공유';
     document.getElementById('pasteHint').classList.remove('hidden');
+    
+    // 2. 버튼 상태 복구 (중요!)
+    const btnNext = document.getElementById('btnNext');
+    btnNext.disabled = false; // 비활성화 해제
+    btnNext.innerHTML = '다음 단계 →'; // 텍스트 복구
+    
+    // 3. UI 레이아웃 초기화
     renderRecipients();
-    document.getElementById('successScreen').className = 'success-screen';
-    document.getElementById('navRow').style.display = 'flex';
+    document.getElementById('successScreen').className = 'success-screen'; // 성공 화면 숨기기
+    document.getElementById('navRow').style.display = 'flex'; // 하단 네비게이션 보이기
+    
+    // 4. 스텝 UI 업데이트 (1단계로 이동)
     updateStepUI();
   }
 
