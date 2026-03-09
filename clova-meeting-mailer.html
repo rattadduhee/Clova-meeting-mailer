@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>회의록 메일 전송기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<style>
+  :root {
+    --green: #00C471;
+    --green-dark: #00A35C;
+    --green-pale: #E8FBF3;
+    --navy: #0D1B2A;
+    --gray-900: #1A1A2E;
+    --gray-700: #3D3D56;
+    --gray-400: #9B9BB4;
+    --gray-100: #F4F4F9;
+    --white: #FFFFFF;
+    --border: #E2E2EF;
+    --shadow: 0 4px 24px rgba(0,196,113,0.10);
+    --shadow-lg: 0 12px 48px rgba(13,27,42,0.13);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #F0F2F8;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px 80px;
+  }
+
+  /* ── Header ── */
+  header {
+    width: 100%;
+    max-width: 860px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .logo-badge {
+    background: var(--green);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: -0.3px;
+  }
+  header span.sub {
+    font-size: 13px;
+    color: var(--gray-400);
+    margin-left: 4px;
+    font-weight: 300;
+  }
+
+  /* ── Setup banner ── */
+  .setup-banner {
+    width: 100%;
+    max-width: 860px;
+    background: #FFF8E1;
+    border: 1px solid #FFD54F;
+    border-radius: 12px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #7B5800;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .setup-banner .icon { font-size: 18px; flex-shrink: 0; }
+  .setup-banner strong { display: block; margin-bottom: 4px; font-size: 14px; }
+  .setup-banner code {
+    background: rgba(0,0,0,0.07);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .setup-toggle {
+    margin-top: 8px;
+    background: #FFD54F;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #5C3D00;
+  }
+
+  /* ── Config panel ── */
+  .config-panel {
+    width: 100%;
+    max-width: 860px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    display: none;
+    box-shadow: var(--shadow);
+  }
+  .config-panel.open { display: block; }
+  .config-panel h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  @media(max-width:640px){ .config-grid { grid-template-columns: 1fr; } }
+  .config-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray-400);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .config-field input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    outline: none;
+    transition: border-color 0.2s;
+    color: var(--navy);
+  }
+  .config-field input:focus { border-color: var(--green); }
+  .config-save {
+    margin-top: 16px;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .config-save:hover { background: var(--green-dark); }
+
+  /* ── Main card ── */
+  .card {
+    width: 100%;
+    max-width: 860px;
+    background: var(--white);
+    border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+
+  /* ── Step tabs ── */
+  .steps {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    background: var(--gray-100);
+  }
+  .step-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 0;
+    margin-right: 28px;
+    border-bottom: 2px solid transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-400);
+    transition: all 0.2s;
+    cursor: default;
+  }
+  .step-item.active {
+    border-bottom-color: var(--green);
+    color: var(--green);
+  }
+  .step-item.done { color: var(--navy); }
+  .step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--gray-400);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .step-item.active .step-num { background: var(--green); color: white; }
+  .step-item.done .step-num { background: var(--navy); color: white; }
+
+  /* ── Content sections ── */
+  .section {
+    padding: 28px 32px;
+    display: none;
+  }
+  .section.active { display: block; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Paste area ── */
+  .paste-area {
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    min-height: 260px;
+    background: var(--gray-100);
+    transition: all 0.2s;
+    position: relative;
+  }
+  .paste-area:focus-within {
+    border-color: var(--green);
+    background: var(--green-pale);
+  }
+  .paste-area textarea {
+    width: 100%;
+    min-height: 220px;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--navy);
+    resize: vertical;
+  }
+  .paste-area textarea::placeholder { color: var(--gray-400); }
+
+  .paste-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.2s;
+  }
+  .paste-hint.hidden { opacity: 0; }
+  .paste-hint .big-icon { font-size: 40px; margin-bottom: 12px; }
+  .paste-hint p { font-size: 14px; color: var(--gray-400); line-height: 1.6; }
+  .paste-hint strong { color: var(--navy); }
+
+  /* ── Preview ── */
+  .preview-box {
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .preview-header {
+    background: var(--gray-100);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .preview-header span { font-size: 12px; color: var(--gray-400); font-weight: 500; }
+  .char-count {
+    background: var(--green-pale);
+    color: var(--green-dark);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .preview-body {
+    padding: 20px 24px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--navy);
+    white-space: pre-wrap;
+    max-height: 280px;
+    overflow-y: auto;
+    min-height: 80px;
+  }
+  .preview-empty {
+    color: var(--gray-400);
+    font-style: italic;
+    font-size: 13px;
+  }
+
+  /* ── Email form ── */
+  .email-form { display: flex; flex-direction: column; gap: 18px; }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gray-700);
+    letter-spacing: 0.5px;
+    margin-bottom: 7px;
+  }
+  .form-group input, .form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: var(--navy);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: var(--white);
+  }
+  .form-group input:focus, .form-group textarea:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(0,196,113,0.12);
+  }
+  .form-group textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+  .recipients-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .recipient-tag {
+    background: var(--green-pale);
+    color: var(--green-dark);
+    border: 1px solid #A8EDCD;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .recipient-tag button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--green-dark);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    opacity: 0.6;
+  }
+  .recipient-tag button:hover { opacity: 1; }
+
+  .email-input-row {
+    display: flex;
+    gap: 10px;
+  }
+  .email-input-row input { flex: 1; }
+  .add-btn {
+    background: var(--gray-100);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 0 18px;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--gray-700);
+    transition: all 0.15s;
+    display: flex; align-items: center;
+  }
+  .add-btn:hover { background: var(--green-pale); border-color: var(--green); color: var(--green-dark); }
+
+  /* ── Content preview in send tab ── */
+  .content-preview-mini {
+    background: var(--gray-100);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: var(--navy);
+    line-height: 1.7;
+    max-height: 120px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+
+  /* ── Navigation ── */
+  .nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 32px;
+    border-top: 1px solid var(--border);
+    background: var(--gray-100);
+  }
+  .btn-back {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--gray-700);
+    transition: all 0.15s;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+  .btn-back:hover { border-color: var(--gray-700); }
+  .btn-next {
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 28px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+  .btn-next:hover { background: var(--green-dark); }
+  .btn-next:active { transform: scale(0.97); }
+  .btn-next:disabled { background: var(--gray-400); cursor: not-allowed; transform: none; }
+
+  /* ── Send button ── */
+  .btn-send {
+    background: linear-gradient(135deg, #00C471 0%, #00A0A0 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 36px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Noto Sans KR', sans-serif;
+    box-shadow: 0 4px 16px rgba(0,196,113,0.35);
+  }
+  .btn-send:hover { opacity: 0.92; }
+  .btn-send:active { transform: scale(0.97); }
+  .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Success screen ── */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 60px 32px;
+  }
+  .success-screen.active { display: block; }
+  .success-icon {
+    width: 72px; height: 72px;
+    background: var(--green-pale);
+    border: 3px solid var(--green);
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    animation: popIn 0.4s cubic-bezier(0.17,0.67,0.5,1.3);
+  }
+  @keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .success-screen h2 { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
+  .success-screen p { font-size: 14px; color: var(--gray-400); line-height: 1.7; }
+  .btn-reset {
+    margin-top: 28px;
+    background: var(--navy);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 28px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: opacity 0.2s;
+  }
+  .btn-reset:hover { opacity: 0.85; }
+
+  /* ── Loading spinner ── */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 32px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--navy);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    transition: transform 0.3s ease;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: #E53E3E; }
+  .toast.success { background: var(--green-dark); }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge">CLOVA</div>
+  <h1>회의록 메일 전송기 <span class="sub">— Meeting Note Mailer</span></h1>
+</header>
+
+<!-- Setup banner -->
+<div class="setup-banner" id="setupBanner">
+  <div class="icon">⚙️</div>
+  <div>
+    <strong>EmailJS 설정이 필요합니다</strong>
+    <a href="https://www.emailjs.com/" target="_blank">emailjs.com</a>에서 무료 계정 생성 후,
+    <code>Public Key</code>, <code>Service ID</code>, <code>Template ID</code>를 입력하세요.
+    템플릿 변수: <code>{{to_email}}</code>, <code>{{subject}}</code>, <code>{{message}}</code>, <code>{{from_name}}</code>
+    <br>
+    <button class="setup-toggle" onclick="toggleConfig()">🔧 설정 열기</button>
+  </div>
+</div>
+
+<!-- Config panel -->
+<div class="config-panel" id="configPanel">
+  <h3>🔑 EmailJS 연동 설정</h3>
+  <div class="config-grid">
+    <div class="config-field">
+      <label>Public Key</label>
+      <input type="text" id="ejsPublicKey" placeholder="xxxxxxxxxxxxxxxxxxxxxx">
+    </div>
+    <div class="config-field">
+      <label>Service ID</label>
+      <input type="text" id="ejsServiceId" placeholder="service_xxxxxxx">
+    </div>
+    <div class="config-field">
+      <label>Template ID</label>
+      <input type="text" id="ejsTemplateId" placeholder="template_xxxxxxx">
+    </div>
+  </div>
+  <button class="config-save" onclick="saveConfig()">저장하기</button>
+</div>
+
+<!-- Main card -->
+<div class="card" id="mainCard">
+  <!-- Steps -->
+  <div class="steps">
+    <div class="step-item active" id="step1-tab">
+      <div class="step-num">1</div> 내용 붙여넣기
+    </div>
+    <div class="step-item" id="step2-tab">
+      <div class="step-num">2</div> 미리보기
+    </div>
+    <div class="step-item" id="step3-tab">
+      <div class="step-num">3</div> 수신자 & 전송
+    </div>
+  </div>
+
+  <!-- Step 1: Paste -->
+  <div class="section active" id="section1">
+    <div class="section-label">클로바 노트에서 복사한 내용을 붙여넣으세요</div>
+    <div class="paste-area">
+      <div class="paste-hint" id="pasteHint">
+        <div class="big-icon">📋</div>
+        <p>클로바 노트에서 원하는 텍스트를 <strong>드래그하여 복사</strong>한 후<br>여기에 <strong>Ctrl+V</strong> 또는 <strong>마우스 오른쪽 → 붙여넣기</strong> 하세요</p>
+      </div>
+      <textarea id="pasteInput" placeholder="" oninput="onPasteInput(this)"></textarea>
+    </div>
+  </div>
+
+  <!-- Step 2: Preview -->
+  <div class="section" id="section2">
+    <div class="section-label">내용 확인 및 수정</div>
+    <div class="preview-box">
+      <div class="preview-header">
+        <span>📄 회의 내용 미리보기</span>
+        <span class="char-count" id="charCount">0자</span>
+      </div>
+      <div class="preview-body" id="previewBody">
+        <span class="preview-empty">붙여넣은 내용이 없습니다.</span>
+      </div>
+    </div>
+    <div style="margin-top: 16px; background: var(--green-pale); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--gray-700); line-height: 1.6;">
+      💡 내용을 수정하려면 이전 단계로 돌아가세요. 그대로 전송하려면 다음 단계로 진행하세요.
+    </div>
+  </div>
+
+  <!-- Step 3: Send -->
+  <div class="section" id="section3">
+    <div class="email-form">
+      <div>
+        <div class="section-label">전송할 내용 (요약)</div>
+        <div class="content-preview-mini" id="contentMini">—</div>
+      </div>
+
+      <div class="form-group">
+        <label>📧 수신자 이메일</label>
+        <div class="recipients-row" id="recipientTags"></div>
+        <div class="email-input-row" style="margin-top: 8px;">
+          <input type="email" id="emailInput" placeholder="example@company.com 입력 후 + 버튼 또는 Enter">
+          <button class="add-btn" onclick="addRecipient()" title="추가">＋</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>📌 메일 제목</label>
+        <input type="text" id="mailSubject" value="[회의록] 클로바 노트 요약 공유">
+      </div>
+
+      <div class="form-group">
+        <label>✏️ 추가 메모 (선택)</label>
+        <textarea id="mailNote" placeholder="수신자에게 전달할 추가 안내사항을 입력하세요..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success -->
+  <div class="success-screen" id="successScreen">
+    <div class="success-icon">✉️</div>
+    <h2>전송 완료!</h2>
+    <p id="successMsg">회의록이 성공적으로 전송되었습니다.</p>
+    <button class="btn-reset" onclick="resetAll()">🔄 새로 시작하기</button>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav-row" id="navRow">
+    <button class="btn-back" onclick="prevStep()" id="btnBack" style="visibility:hidden">← 이전</button>
+    <button class="btn-next" onclick="nextStep()" id="btnNext">다음 단계 →</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── State ──
+  let currentStep = 1;
+  let recipients = [];
+  let config = { publicKey: '', serviceId: '', templateId: '' };
+
+  // Load from localStorage
+  try {
+    const saved = JSON.parse(localStorage.getItem('clovaMail_config') || '{}');
+    if (saved.publicKey) config = saved;
+    applyConfigToInputs();
+    if (config.publicKey) {
+      emailjs.init(config.publicKey);
+      document.getElementById('setupBanner').style.display = 'none';
+    }
+  } catch(e) {}
+
+  function applyConfigToInputs() {
+    document.getElementById('ejsPublicKey').value = config.publicKey || '';
+    document.getElementById('ejsServiceId').value = config.serviceId || '';
+    document.getElementById('ejsTemplateId').value = config.templateId || '';
+  }
+
+  function toggleConfig() {
+    const p = document.getElementById('configPanel');
+    p.classList.toggle('open');
+  }
+
+  function saveConfig() {
+    config.publicKey = document.getElementById('ejsPublicKey').value.trim();
+    config.serviceId = document.getElementById('ejsServiceId').value.trim();
+    config.templateId = document.getElementById('ejsTemplateId').value.trim();
+    if (!config.publicKey || !config.serviceId || !config.templateId) {
+      showToast('모든 필드를 입력해주세요.', 'error'); return;
+    }
+    localStorage.setItem('clovaMail_config', JSON.stringify(config));
+    emailjs.init(config.publicKey);
+    document.getElementById('setupBanner').style.display = 'none';
+    document.getElementById('configPanel').classList.remove('open');
+    showToast('✅ EmailJS 설정이 저장되었습니다.', 'success');
+  }
+
+  // ── Step logic ──
+  function updateStepUI() {
+    for (let i = 1; i <= 3; i++) {
+      const tab = document.getElementById(`step${i}-tab`);
+      const sec = document.getElementById(`section${i}`);
+      tab.className = 'step-item' + (i === currentStep ? ' active' : i < currentStep ? ' done' : '');
+      sec.className = 'section' + (i === currentStep ? ' active' : '');
+    }
+    document.getElementById('btnBack').style.visibility = currentStep === 1 ? 'hidden' : 'visible';
+    const btnNext = document.getElementById('btnNext');
+    if (currentStep === 3) {
+      btnNext.innerHTML = '<span class="spinner" id="spinner"></span>✉️ 지금 전송하기';
+      btnNext.onclick = sendMail;
+    } else {
+      btnNext.innerHTML = '다음 단계 →';
+      btnNext.onclick = nextStep;
+    }
+  }
+
+  function nextStep() {
+    const text = document.getElementById('pasteInput').value.trim();
+    if (currentStep === 1 && !text) {
+      showToast('📋 내용을 먼저 붙여넣어 주세요.', 'error'); return;
+    }
+    if (currentStep < 3) {
+      currentStep++;
+      if (currentStep === 2) updatePreview();
+      if (currentStep === 3) updateSendTab();
+      updateStepUI();
+    }
+  }
+
+  function prevStep() {
+    if (currentStep > 1) { currentStep--; updateStepUI(); }
+  }
+
+  // ── Paste ──
+  function onPasteInput(el) {
+    const hint = document.getElementById('pasteHint');
+    hint.classList.toggle('hidden', el.value.length > 0);
+  }
+
+  // ── Preview ──
+  function updatePreview() {
+    const text = document.getElementById('pasteInput').value.trim();
+    const body = document.getElementById('previewBody');
+    const cnt = document.getElementById('charCount');
+    if (text) {
+      body.innerHTML = '';
+      body.textContent = text;
+      cnt.textContent = text.length.toLocaleString() + '자';
+    } else {
+      body.innerHTML = '<span class="preview-empty">붙여넣은 내용이 없습니다.</span>';
+      cnt.textContent = '0자';
+    }
+  }
+
+  // ── Send tab ──
+  function updateSendTab() {
+    const text = document.getElementById('pasteInput').value.trim();
+    document.getElementById('contentMini').textContent = text.slice(0, 300) + (text.length > 300 ? '...' : '');
+  }
+
+  // ── Recipients ──
+  document.getElementById('emailInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addRecipient(); }
+  });
+
+  function addRecipient() {
+    const input = document.getElementById('emailInput');
+    const val = input.value.trim();
+    if (!val) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+      showToast('올바른 이메일 형식이 아닙니다.', 'error'); return;
+    }
+    if (recipients.includes(val)) {
+      showToast('이미 추가된 이메일입니다.', 'error'); return;
+    }
+    recipients.push(val);
+    input.value = '';
+    renderRecipients();
+  }
+
+  function removeRecipient(email) {
+    recipients = recipients.filter(r => r !== email);
+    renderRecipients();
+  }
+
+  function renderRecipients() {
+    const container = document.getElementById('recipientTags');
+    container.innerHTML = recipients.map(r =>
+      `<div class="recipient-tag">${r}<button onclick="removeRecipient('${r}')">×</button></div>`
+    ).join('');
+  }
+
+  // ── Send ──
+  async function sendMail() {
+    if (!config.publicKey) {
+      showToast('⚙️ 먼저 EmailJS 설정을 완료해주세요.', 'error'); return;
+    }
+    if (recipients.length === 0) {
+      showToast('수신자 이메일을 1개 이상 추가해주세요.', 'error'); return;
+    }
+
+    const subject = document.getElementById('mailSubject').value.trim() || '[회의록] 클로바 노트 요약';
+    const note = document.getElementById('mailNote').value.trim();
+    const content = document.getElementById('pasteInput').value.trim();
+    const message = (note ? `📝 추가 메모:\n${note}\n\n` : '') + `📋 회의 내용:\n\n${content}`;
+
+    const btn = document.getElementById('btnNext');
+    const spinner = document.getElementById('spinner');
+    btn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+
+    try {
+      for (const email of recipients) {
+        await emailjs.send(config.serviceId, config.templateId, {
+          to_email: email,
+          subject: subject,
+          message: message,
+          from_name: '클로바 회의록 시스템'
+        });
+      }
+      // Success
+      document.getElementById('navRow').style.display = 'none';
+      for (let i = 1; i <= 3; i++) {
+        document.getElementById(`section${i}`).className = 'section';
+        document.getElementById(`step${i}-tab`).className = 'step-item done';
+      }
+      const ss = document.getElementById('successScreen');
+      ss.className = 'success-screen active';
+      document.getElementById('successMsg').textContent =
+        `${recipients.join(', ')}으로 회의록이 성공적으로 전송되었습니다.`;
+    } catch(err) {
+      showToast('❌ 전송 실패: ' + (err.text || err.message || '알 수 없는 오류'), 'error');
+      btn.disabled = false;
+      if (spinner) spinner.style.display = 'none';
+    }
+  }
+
+  // ── Reset ──
+  function resetAll() {
+    currentStep = 1;
+    recipients = [];
+    document.getElementById('pasteInput').value = '';
+    document.getElementById('emailInput').value = '';
+    document.getElementById('mailNote').value = '';
+    document.getElementById('mailSubject').value = '[회의록] 클로바 노트 요약 공유';
+    document.getElementById('pasteHint').classList.remove('hidden');
+    renderRecipients();
+    document.getElementById('successScreen').className = 'success-screen';
+    document.getElementById('navRow').style.display = 'flex';
+    updateStepUI();
+  }
+
+  // ── Toast ──
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + type;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  updateStepUI();
+</script>
+</body>
+</html>
